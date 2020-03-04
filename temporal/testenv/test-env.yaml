@@ -1,4 +1,16 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: workdir
+spec:
+  accessModes: 
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi # make this bigger in production
 
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,53 +34,23 @@ spec:
       - name: workdir
         persistentVolumeClaim: 
           claimName: workdir
-      
-      initContainers: 
-        - name: config
-          image: busybox
-          command: 
-          - wget
-          - "-O"
-          - "/temporal/config.json"
-          - https://raw.githubusercontent.com/AIDXNZ/KubeIPFS/master/config.json
-          volumeMounts:
-            - name: workdir
-              mountPath: "/temporal"
-
-        - name: config2
-          image: busybox
-          command: 
-          - wget
-          - "-O"
-          - "/temporal/api.cert"
-          - https://raw.githubusercontent.com/RTradeLtd/testenv/master/certs/api.cert
-          volumeMounts:
-            - name: workdir
-              mountPath: "/temporal"
-               
-        - name: config3
-          image: busybox
-          command: 
-          - wget
-          - "-O"
-          - "/temporal/api.key"
-          - https://raw.githubusercontent.com/RTradeLtd/testenv/master/certs/api.key
-          volumeMounts:
-            - name: workdir
-              mountPath: "/temporal"
-      
-    
+          
       containers:
 
       - name: temporal
-        image: "docker.io/rtradetech/temporal:latest"
-        command: ["temporal", "-config", "/temporal/config.json"]
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1"
+        command: ["temporal", "-config", "", "-debug"]
         args: ["api"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
+          - name: api
+            containerPort: 6767
           - name: ipfs
             protocol: TCP
             containerPort: 5001
-          - name: "api"
+          - name: "cluster"
             protocol: "TCP"
             containerPort: 9094 
           - name: db
@@ -81,9 +63,12 @@ spec:
 
 
       - name: krab
-        image: "docker.io/rtradetech/temporal:latest"
-        command: ["temporal", "-config", "/temporal/config.json", "--db.no_ssl"]     
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1"
+        command: ["temporal", "-config", "", "--db.no_ssl"]     
         args: ["krab"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -101,9 +86,12 @@ spec:
 
 
       - name: queue-email-send
-        image: "docker.io/rtradetech/temporal:latest"
-        command: ["temporal", "-config", "/temporal/config.json", "-db.no_ssl"]  
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1"
+        command: ["temporal", "-config", "", "-db.no_ssl"]  
         args: ["queue", "email-send"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -120,9 +108,12 @@ spec:
               mountPath: "/temporal"
 
       - name: queue-ipfs-cluster
-        image: "docker.io/rtradetech/temporal:latest" 
-        command: ["temporal", "-config", "/temporal/config.json", "-db.no_ssl"]
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1" 
+        command: ["temporal", "-config", "", "-db.no_ssl"]
         args: ["queue", "ipfs", "cluster"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -140,9 +131,12 @@ spec:
 
 
       - name: queue-ipfs-ipns-entry
-        image: "docker.io/rtradetech/temporal:latest" 
-        command: ["temporal", "-config", "/temporal/config.json", "-db.no_ssl"] 
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1" 
+        command: ["temporal", "-config", "", "-db.no_ssl"] 
         args: ["queue", "ipfs", "ipns-entry"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -161,9 +155,12 @@ spec:
 
 
       - name: queue-ipfs-key-creation
-        image: "docker.io/rtradetech/temporal:latest"
-        command: ["temporal", "-config", "/temporal/config.json", "-db.no_ssl"]  
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1"
+        command: ["temporal", "-config", "", "-db.no_ssl"]  
         args: ["queue", "ipfs", "key-creation"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -181,9 +178,12 @@ spec:
 
 
       - name: queue-ipfs-pin
-        image: "docker.io/rtradetech/temporal:latest"
-        command: ["temporal", "-config", "/temporal/config.json", "-db.no_ssl"]  
+        image: "docker.io/rtradetech/temporal:v2.4.3-rc1"
+        command: ["temporal", "-config", "", "-db.no_ssl"]  
         args: ["queue", "ipfs", "pin"]
+        envFrom: 
+        - configMapRef:
+            name: temporal-config
         ports: 
           - name: ipfs
             protocol: TCP
@@ -275,15 +275,3 @@ spec:
         volumeMounts:
         - name: workdir
           mountPath: /var/lib/rabbitmq
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: workdir
-spec:
-  accessModes: 
-    - ReadWriteOnce
-  storageClassName: standard
-  resources:
-    requests:
-      storage: 1Gi # make this bigger in production

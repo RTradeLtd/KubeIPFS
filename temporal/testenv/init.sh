@@ -15,6 +15,8 @@ echo "
 
 "
 
+echo "Inititalizing prerequisites....."
+
 echo "Generating erlang cookie..."
 kubectl create secret generic rabbitmq-config --from-literal=erlang-cookie=c-is-for-cookie-thats-good-enough-for-me
 
@@ -23,7 +25,9 @@ sleep 1
 echo "Deploying postgres...."
 kubectl apply -f postgres.yaml
 
+kubectl apply -f temporal-config.yaml
 
 kubectl get services
+
 
 set +ex

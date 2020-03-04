@@ -1,5 +1,17 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: workdir
+spec:
+  accessModes: 
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi # make this bigger in production
+---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: ipfs-cluster
   labels:
@@ -15,12 +27,18 @@ spec:
         app: ipfs-cluster
         role: peer
     spec:
+
+      volumes:
+      - name: workdir
+        persistentVolumeClaim:
+          claimName: workdir
+
       containers:
       - name: ipfs-cluster
         image: "docker.io/ipfs/ipfs-cluster:latest"
-        env: 
-        - name: CLUSTER_SECRET
-          value: "9d171041f5ffd244316307e2141a6890dbf5fb4c00dfb38fd61721b88a4adf87"
+        envFrom: 
+          - configMapRef:
+              name: ipfs-cluster-config
         ports:
         - containerPort: 4001
           name: "swarm"
@@ -39,6 +57,9 @@ spec:
           protocol: "TCP"
       - name: go-ipfs
         image: "ipfs/go-ipfs"
+        envFrom: 
+          - configMapRef:
+              name: ipfs-cluster-config
         ports:
             - name: swarm
               protocol: TCP
@@ -46,7 +67,7 @@ spec:
             - name: swarm-udp
               protocol: UDP
               containerPort: 4002
-            - name: api
+            - name: ipfs-daemon-api
               protocol: TCP
               containerPort: 5001
             - name: ws
@@ -55,3 +76,39 @@ spec:
             - name: http
               protocol: TCP
               containerPort: 8080
+        resources:
+          requests:
+            cpu: 100m
+---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: ipfs-cluster
+    labels:
+      app: ipfs-cluster
+  spec:
+    type: LoadBalancer
+    ports:
+      - name: swarm
+        targetPort: swarm
+        port: 4001
+      - name: swarm-udp
+        targetPort: swarm-udp
+        port: 4002
+      - name: ws
+        targetPort: ws
+        port: 8081
+      - name: http
+        targetPort: http
+        port: 8080
+      - name: api-http
+        targetPort: api-http
+        port: 9094
+      - name: proxy-http
+        targetPort: proxy-http
+        port: 9095
+      - name: cluster-swarm
+        targetPort: cluster-swarm
+        port: 9096
+    selector:
+      app: ipfs-cluster
