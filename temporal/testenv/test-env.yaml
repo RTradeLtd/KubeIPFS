@@ -284,8 +284,10 @@ metadata:
   labels:
     app: temporal
 spec:
+  type: NodePort
   ports:
-  - port: 6767
-    name: api
+    - name: api
+      port: 6767
+      protocol: TCP
   selector:
     app: temporal
