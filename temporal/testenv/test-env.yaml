@@ -284,10 +284,11 @@ metadata:
   labels:
     app: temporal
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
     - name: api
       port: 6767
+      targetPort: 7678
       protocol: TCP
   selector:
     app: temporal
