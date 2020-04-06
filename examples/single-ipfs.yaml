@@ -13,19 +13,19 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: ipfs-cluster
+  name: ipfs-node
   labels:
-    name: ipfs-cluster
+    name: ipfs-node
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels: 
-      app: ipfs-cluster
+      app: ipfs-node
   template:
     metadata:
       labels:
-        app: ipfs-cluster
-        role: peer
+        app: ipfs-node
+        role: node
     spec:
 
       volumes:
@@ -34,32 +34,8 @@ spec:
           claimName: workdir
 
       containers:
-      - name: ipfs-cluster
-        image: "docker.io/ipfs/ipfs-cluster:latest"
-        envFrom: 
-          - configMapRef:
-              name: ipfs-cluster-config
-        ports:
-        - containerPort: 4001
-          name: "swarm"
-          protocol: "TCP"
-        - containerPort: 5001
-          name: "api"
-          protocol: "TCP"
-        - containerPort: 9094
-          name: "clusterapi"
-          protocol: "TCP"
-        - containerPort: 9095
-          name: "clusterproxy"
-          protocol: "TCP"
-        - containerPort: 9096
-          name: "cluster"
-          protocol: "TCP"
       - name: go-ipfs
         image: "ipfs/go-ipfs"
-        envFrom: 
-          - configMapRef:
-              name: ipfs-cluster-config
         ports:
             - name: swarm
               protocol: TCP
@@ -79,39 +55,22 @@ spec:
         resources:
           requests:
             cpu: 100m
+
 ---
   apiVersion: v1
   kind: Service
   metadata:
-    name: ipfs-cluster-service
+    name: ipfs-gateway
     labels:
-      app: ipfs-cluster
+      app: ipfs-node
   spec:
     type: LoadBalancer
     ports:
-      - name: swarm
-        targetPort: swarm
-        port: 4001
-      - name: swarm-udp
-        targetPort: swarm-udp
-        port: 4002
-      - name: ws
-        targetPort: ws
-        port: 8081
       - name: http
         targetPort: http
         port: 8080
-      - name: api-http
-        targetPort: api-http
-        port: 9094
-      - name: proxy-http
-        targetPort: proxy-http
-        port: 9095
-      - name: cluster-swarm
-        targetPort: cluster-swarm
-        port: 9096
     selector:
-      app: ipfs-cluster
+      app: ipfs-node
 
 ---
 apiVersion: extensions/v1beta1
@@ -127,9 +86,9 @@ metadata:
 
 spec:
   rules:
-  - host: example.com
+  - host:
     http:
       paths:
       - backend:
-          serviceName: ipfs-cluster-service
+          serviceName: ipfs-gateway
           servicePort: 8080
